@@ -1,5 +1,6 @@
 # Built application
 build
+dist/
 
 # Built dependencies
 node_modules
