@@ -42,5 +42,10 @@
     "template",
     "configuration"
   ],
-  "type": "module"
+  "type": "module",
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "grammy": "^1.31.0",
+    "mongodb": "^6.10.0"
+  }
 }
