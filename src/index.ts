@@ -1,7 +1,9 @@
-import { Bot, InlineKeyboard } from 'grammy';
+import { Bot } from 'grammy';
 
 import 'dotenv/config';
-import { connect, updateUser } from './database.js';
+import { userService } from './services/user.js';
+import { uiService } from './services/ui.js';
+import { connect } from './database.js';
 
 const token = process.env.TOKEN;
 if (!token) {
@@ -11,38 +13,87 @@ if (!token) {
 const bot = new Bot(token);
 const { collection } = await connect();
 
-bot.command('start', ctx =>
-  ctx.reply('Welcome! Secret Santa Bot. /wishlist for filling in wishlist. /groups to display groups'),
-);
-bot.chatType(['supergroup', 'group', 'private']).command('group', async ctx => {
-  const keyboard = new InlineKeyboard().text('Join', 'join').text('Quit', 'quit');
+bot.use(async (ctx, next) => {
+  if (ctx.from) {
+    await userService.ensureUser(ctx.from.id, ctx.from.first_name, collection);
+  }
+  await next();
+});
 
-  // Send the message with the inline keyboard
-  await ctx.reply('Please choose an option and submit:', {
+// TODO: fix possibility to join or leave game after the start
+
+bot
+  .chatType(['private'])
+  .command('start', ctx =>
+    ctx.reply('Welcome to Secret Santa Bot! /wishlist for filling in wishlist. /groups to display groups'),
+  );
+bot.chatType(['supergroup', 'group']).command('santa', async ctx => {
+  const { text, keyboard } = await uiService.generateStatsTextMessage(
+    ctx.chatId,
+    collection,
+    `t.me/${ctx.me.username}`,
+  );
+  await ctx.reply(text, {
     reply_markup: keyboard,
   });
 });
 
-bot.callbackQuery('join', async ctx => {
+bot.chatType(['supergroup', 'group']).callbackQuery('ready', async ctx => {
   try {
-    await updateUser(collection, {
-      from: {
-        first_name: ctx.from.first_name,
-        id: ctx.from.id,
-      },
-      chatId: ctx.chatId,
-    });
-    await ctx.answerCallbackQuery(`Welcome to Secret Santa ${ctx.from.first_name}!`);
+    const isAdded = await userService.setReady(ctx.from.id, ctx.chatId, collection);
+    if (isAdded) {
+      await ctx.answerCallbackQuery(`You successfully confirmed participation in Secret Santa ${ctx.from.first_name}!`);
+      const { text, keyboard } = await uiService.generateStatsTextMessage(ctx.chatId, collection);
+      await ctx.editMessageText(text, {
+        reply_markup: keyboard,
+      });
+    } else {
+      await ctx.answerCallbackQuery('You are ready. 🎄');
+    }
+  } catch (error) {
+    await ctx.answerCallbackQuery(`Oops, error occured`);
+    console.error(`Oops, error occured`, error);
+  }
+});
+bot.chatType(['supergroup', 'group']).callbackQuery('join', async ctx => {
+  try {
+    const isAdded = await userService.joinGroup(ctx.from.id, ctx.chatId, collection);
+    if (isAdded) {
+      await ctx.answerCallbackQuery(`You successfully joined Secret Santa ${ctx.from.first_name}!`);
+      const { text, keyboard } = await uiService.generateStatsTextMessage(ctx.chatId, collection);
+      await ctx.editMessageText(text, {
+        reply_markup: keyboard,
+      });
+    } else {
+      await ctx.answerCallbackQuery('You are already in a Secret Santa group.');
+    }
   } catch (error) {
     await ctx.answerCallbackQuery(`Oops, error occured`);
     console.error(`Oops, error occured`, error);
   }
 });
 
-bot.callbackQuery('quit', async ctx => {
-  await ctx.answerCallbackQuery('You successfully leave a Secret Santa.');
+bot.chatType(['supergroup', 'group']).callbackQuery('quit', async ctx => {
+  const leaved = await userService.quitGroup(ctx.from.id, ctx.chatId, collection);
+  if (leaved) {
+    await ctx.answerCallbackQuery(`You successfully left Secret Santa!`);
+    const { text, keyboard } = await uiService.generateStatsTextMessage(ctx.chatId, collection);
+    await ctx.editMessageText(text, {
+      reply_markup: keyboard,
+    });
+  } else {
+    await ctx.answerCallbackQuery('You are not in a Secret Santa group.');
+  }
 });
-
-bot.on('message', ctx => ctx.reply('Got another message!'));
+bot.callbackQuery('noop', async ctx => {
+  await ctx.answerCallbackQuery();
+});
+bot.chatType(['supergroup', 'group']).callbackQuery('game_start', async ctx => {
+  await userService.assignSecretSantas(ctx.chatId, collection);
+  const { text, keyboard } = await uiService.generateGameTextMessage(ctx.chatId, `t.me/${ctx.me.username}`);
+  await ctx.editMessageText(text, {
+    reply_markup: keyboard,
+  });
+});
 
 void bot.start();
