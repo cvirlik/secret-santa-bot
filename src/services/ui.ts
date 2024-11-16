@@ -1,11 +1,11 @@
 import type { Collection } from 'mongodb';
-import { InlineKeyboard } from 'grammy';
+import { InlineKeyboard, Keyboard } from 'grammy';
 
 import type { User } from '../database.js';
-import { userService } from './user.js';
+import { groupService } from './group.js';
 
 async function generateStatsTextMessage(chatId: number, collection: Collection<User>, url: string = '') {
-  const members = await userService.getGroupMembers(chatId, collection);
+  const members = await groupService.getGroupMembers(chatId, collection);
   if (members.length === 0) {
     return {
       text: 'No players in the group!',
@@ -44,4 +44,21 @@ async function generateGameTextMessage(chatId: number, url: string) {
   };
 }
 
-export const uiService = { generateStatsTextMessage, generateGameTextMessage };
+function generateListMessage(list: string[] | undefined, type: string) {
+  let text = '';
+  if (list === undefined || list.length === 0) {
+    text += `You currently have no ${type}!\n\n`;
+  } else {
+    text += `Your ${type}:\n`;
+    for (let i = 0; i < list.length; i++) {
+      text += `- ${list[i]} /delete_${i}\n`;
+    }
+  }
+  const keyboard = new Keyboard().text('Add item').text('Back').resized();
+  return {
+    text,
+    keyboard,
+  };
+}
+
+export const uiService = { generateStatsTextMessage, generateGameTextMessage, generateListMessage };

@@ -18,6 +18,7 @@ export type UserGroup = {
   id: number | undefined;
   person: number | null;
   ready: boolean;
+  name: string;
 };
 
 export type User = {
