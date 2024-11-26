@@ -18,16 +18,16 @@ userController.chatType(['private']).hears('Giftee 🎁', async ctx => {
       const giftee = giftees.find(g => g.id === group.person);
       if (giftee) {
         let wishlist = giftee.wishlist?.map(wish => `· ${wish}`).join('\n');
-        wishlist = wishlist ? `❤️ Wishlist:\n${wishlist}` : '';
+        wishlist = wishlist ? `\n\n❤️ Wishlist:\n${wishlist}` : '';
         let blocklist = giftee.blocklist?.map(wish => `· ${wish}`).join('\n');
-        blocklist = blocklist ? `💔 Blocklist:\n${blocklist}` : '';
-        return `🎄 ${group.name}: ${giftee.name}\n\n${wishlist}\n\n${blocklist}`;
+        blocklist = blocklist ? `\n\n💔 Blocklist:\n${blocklist}` : '';
+        return `🎄 ${group.name}: ${giftee.name}${wishlist}${blocklist}`;
       } else {
         return `🌲 ${group.name}: Giftee not selected`;
       }
     })
     .join('\n\n\n');
-  await ctx.reply(data);
+  await ctx.reply(data || 'Use /santa in a group chat to create or join Santa group');
 });
 userController.chatType(['private']).hears('My wishlist ❤️', async ctx => {
   ctx.session.action = 'wish';
@@ -75,7 +75,11 @@ userController.chatType(['private']).hears(commands, async ctx => {
   if (ctx.message.text === commands[0]) {
     const santas = await userService.getSanta(ctx.from.id, ctx.db);
     for (const santa of santas) {
-      await ctx.api.sendMessage(santa.id, `Your giftee ${ctx.from.first_name} has changed their wishes!`);
+      try {
+        await ctx.api.sendMessage(santa.id, `Your giftee ${ctx.from.first_name} has changed their wishes!`);
+      } catch {
+        //ignore
+      }
     }
   }
 });

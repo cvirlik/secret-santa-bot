@@ -7,8 +7,9 @@ async function ensureUser(id: number, name: string, collection: Collection<User>
     { id },
     {
       $set: { name },
+      $setOnInsert: { id, groups: [], wishlist: [], blocklist: [] },
     },
-    { upsert: true },
+    { upsert: true, returnDocument: 'after' },
   );
 }
 
