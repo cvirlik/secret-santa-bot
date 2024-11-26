@@ -65,13 +65,21 @@ userController.chatType(['private']).hears('Add item', async ctx => {
   });
 });
 
-userController.chatType(['private']).hears(['Finish', 'Back'], async ctx => {
+const commands = ['Finish', 'Back'];
+userController.chatType(['private']).hears(commands, async ctx => {
   ctx.session.action = null;
   const keyboard = new Keyboard().text('Giftee 🎁').text('My wishlist ❤️').text('My blocklist 💔').resized();
   await ctx.reply('Use keyboard to navigate.', {
     reply_markup: keyboard,
   });
+  if (ctx.message.text === commands[0]) {
+    const santas = await userService.getSanta(ctx.from.id, ctx.db);
+    for (const santa of santas) {
+      await ctx.api.sendMessage(santa.id, `Your giftee ${ctx.from.first_name} has changed their wishes!`);
+    }
+  }
 });
+
 userController.chatType(['private']).hears(/\/delete_(\d+)/, async ctx => {
   let text;
   let keyboard;
@@ -91,6 +99,10 @@ userController.chatType(['private']).hears(/\/delete_(\d+)/, async ctx => {
   await ctx.reply(text, {
     reply_markup: keyboard,
   });
+  const santas = await userService.getSanta(ctx.from.id, ctx.db);
+  for (const santa of santas) {
+    await ctx.api.sendMessage(santa.id, `Your giftee ${ctx.from.first_name} has changed their wishes!`);
+  }
 });
 
 userController.chatType(['private']).on(':text', async ctx => {

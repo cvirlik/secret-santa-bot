@@ -121,6 +121,10 @@ async function deleteBlock(id_user: number, wish_idx: number, collection: Collec
   ]);
 }
 
+async function getSanta(id_giftee: number, collection: Collection<User>) {
+  return collection.find({ 'groups.person': id_giftee }).toArray();
+}
+
 export const userService = {
   ensureUser,
   joinGroup,
@@ -133,4 +137,5 @@ export const userService = {
   addBlock,
   deleteBlock,
   getGiftee,
+  getSanta,
 };
