@@ -46,9 +46,9 @@ async function getWishlist(id_user: number, collection: Collection<User>) {
   const user = await collection.findOne({ id: id_user });
   return { wishlist: user?.wishlist };
 }
-async function getBlacklist(id_user: number, collection: Collection<User>) {
+async function getBlocklist(id_user: number, collection: Collection<User>) {
   const user = await collection.findOne({ id: id_user });
-  return { blacklist: user?.blocklist };
+  return { blocklist: user?.blocklist };
 }
 async function addWish(id_user: number, wish: string, collection: Collection<User>) {
   const user = await collection.updateOne(
@@ -60,7 +60,7 @@ async function addWish(id_user: number, wish: string, collection: Collection<Use
   return user?.modifiedCount !== 0;
 }
 
-async function addBlack(id_user: number, nowish: string, collection: Collection<User>) {
+async function addBlock(id_user: number, nowish: string, collection: Collection<User>) {
   const user = await collection.updateOne(
     { id: id_user },
     {
@@ -91,7 +91,16 @@ async function deleteWish(id_user: number, wish_idx: number, collection: Collect
   ]);
 }
 
-async function deleteBlack(id_user: number, wish_idx: number, collection: Collection<User>) {
+async function getGiftee(user: User, collection: Collection<User>) {
+  return collection
+    .find({
+      'id': {
+        $in: user.groups.map(g => g.person).filter(e => e != null),
+      },
+    })
+    .toArray();
+}
+async function deleteBlock(id_user: number, wish_idx: number, collection: Collection<User>) {
   await collection.bulkWrite([
     {
       updateOne: {
@@ -117,10 +126,11 @@ export const userService = {
   joinGroup,
   quitGroup,
   setReady,
-  getBlacklist,
+  getBlocklist,
   getWishlist,
   addWish,
   deleteWish,
-  addBlack,
-  deleteBlack,
+  addBlock,
+  deleteBlock,
+  getGiftee,
 };

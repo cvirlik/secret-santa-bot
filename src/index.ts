@@ -16,16 +16,19 @@ if (!token) {
 }
 
 interface SessionData {
-  action: 'wish' | 'black' | 'add_wish' | 'add_black' | null;
+  action: 'wish' | 'block' | 'add_wish' | 'add_block' | null;
 }
 
-export type CustomContext = Context & { db: Collection<User> } & SessionFlavor<SessionData>;
+export type CustomContext = Context & { db: Collection<User>; user: User } & SessionFlavor<SessionData>;
 
 const bot = new Bot<CustomContext>(token);
 const { collection } = await connect();
 
 bot.use(async (ctx, next) => {
   ctx.db = collection;
+  if (ctx.from) {
+    ctx.user = (await userService.ensureUser(ctx.from.id, ctx.from.first_name, collection))!;
+  }
   await next();
 });
 
@@ -33,13 +36,6 @@ function initial(): SessionData {
   return { action: null };
 }
 bot.use(session({ initial }));
-
-bot.use(async (ctx, next) => {
-  if (ctx.from) {
-    await userService.ensureUser(ctx.from.id, ctx.from.first_name, collection);
-  }
-  await next();
-});
 
 // TODO: fix possibility to join or leave game after the start
 

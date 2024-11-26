@@ -51,7 +51,7 @@ function generateListMessage(list: string[] | undefined, type: string) {
   } else {
     text += `Your ${type}:\n`;
     for (let i = 0; i < list.length; i++) {
-      text += `- ${list[i]} /delete_${i}\n`;
+      text += `· ${list[i]} /delete_${i}\n`;
     }
   }
   const keyboard = new Keyboard().text('Add item').text('Back').resized();
